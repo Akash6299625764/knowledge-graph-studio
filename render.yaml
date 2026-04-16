@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: knowledge-graph-studio
+    env: python
+    buildCommand: pip install -r requirements.txt && python -m spacy download en_core_web_sm
+    startCommand: gunicorn app:app --timeout 120 --workers 1
+    envVars:
+      - key: MONGO_URI
+        sync: false        # paste manually in Render dashboard
+      - key: MONGO_DB
+        value: knowledge_graph
+      - key: GROQ_API_KEY
+        sync: false        # paste manually in Render dashboard

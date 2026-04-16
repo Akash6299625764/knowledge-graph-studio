@@ -91,6 +91,11 @@ def _is_rate_limit(e):
     msg = str(e)
     return "429" in msg or "rate_limit_exceeded" in msg or "Rate limit" in msg
 
+def _is_fatal(e):
+    """Check if error is a setup/config error — no point retrying chunks."""
+    msg = str(e)
+    return "proxies" in msg or "unexpected keyword" in msg or "Client.__init__" in msg
+
 
 def _spacy_fallback(pdf_path):
     from extractor import extract_graph
@@ -138,9 +143,13 @@ def extract_graph_ai(pdf_path):
         except Exception as e:
             errors += 1
             print(f"[AI extractor] chunk {i+1} error: {e}")
-            # Rate limit hit — no point trying remaining chunks, go straight to spaCy
+            # Rate limit hit — skip remaining chunks, go straight to spaCy
             if _is_rate_limit(e):
                 print("[AI extractor] Rate limit detected — switching to spaCy fallback immediately")
+                return _spacy_fallback(pdf_path)
+            # Fatal config error (e.g. wrong groq/httpx versions) — no point retrying
+            if _is_fatal(e):
+                print("[AI extractor] Fatal Groq client error — switching to spaCy fallback immediately")
                 return _spacy_fallback(pdf_path)
             continue
 

@@ -24,6 +24,7 @@ def get_db():
                 MONGO_URI,
                 serverSelectionTimeoutMS=10000,
                 tlsInsecure=True,
+                connect=False,   # delay actual connection until after gunicorn fork
             )
             # force connection test
             _client.admin.command("ping")

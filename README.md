@@ -56,6 +56,5 @@ ObjectProperties (one per unique relation verb):
   :uses, :proposes, :related_to, :evaluates …
 
 Named Individuals:
-  :bert  rdf:type :Organization ; rdfs:label "BERT"
-  :bert  :proposes  :transformer_architecture
+   rdf:type :Organization ; rdfs:label "BERT"
 ```

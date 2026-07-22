@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Knowledge Graph Studio</title>
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+</style>
+</head>
+
+<body class="h-screen flex flex-col overflow-hidden" style="background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);">
+
+<!-- HEADER -->
+<header class="px-4 py-2 flex items-center gap-4 flex-shrink-0" style="background: rgba(255,255,255,0.07); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.12);">
+  <h1 class="text-base font-bold" style="color: #a78bfa;">⬡ Knowledge Graph Studio</h1>
+  <span class="text-sm" style="color: rgba(255,255,255,0.5);">Nodes: <b id="h-nodes" style="color: #7dd3fc;">0</b></span>
+  <span class="text-sm" style="color: rgba(255,255,255,0.5);">Edges: <b id="h-edges" style="color: #7dd3fc;">0</b></span>
+  <div class="flex-1"></div>
+  <button onclick="exportJSON()" class="text-sm px-3 py-1 rounded" style="background: rgba(255,255,255,0.1); color: #e2e8f0; border: 1px solid rgba(255,255,255,0.2);" onmouseover="this.style.background='rgba(255,255,255,0.18)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">Export JSON</button>
+  <button onclick="clearAll()" class="text-sm px-3 py-1 rounded" style="background: rgba(239,68,68,0.15); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3);" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">Clear All</button>
+</header>
+
+<!-- MAIN -->
+<div class="flex flex-1 overflow-hidden">
+
+  <!-- SIDEBAR -->
+  <div class="w-72 flex flex-col flex-shrink-0" style="background: rgba(255,255,255,0.06); backdrop-filter: blur(10px); border-right: 1px solid rgba(255,255,255,0.1);">
+
+    <!-- TABS -->
+    <div class="flex" style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+      <button onclick="switchTab('create')" id="t-create" class="tab-btn flex-1 py-2 text-xs font-medium" style="color: #a78bfa; border-bottom: 2px solid #a78bfa;">Create</button>
+      <button onclick="switchTab('nodes')"  id="t-nodes"  class="tab-btn flex-1 py-2 text-xs font-medium" style="color: rgba(255,255,255,0.4);">Nodes</button>
+      <button onclick="switchTab('query')"  id="t-query"  class="tab-btn flex-1 py-2 text-xs font-medium" style="color: rgba(255,255,255,0.4);">Query</button>
+      <button onclick="switchTab('pdf')"    id="t-pdf"    class="tab-btn flex-1 py-2 text-xs font-medium" style="color: rgba(255,255,255,0.4);">PDF</button>
+      <button onclick="switchTab('owl')"    id="t-owl"    class="tab-btn flex-1 py-2 text-xs font-medium" style="color: rgba(255,255,255,0.4);">OWL</button>
+    </div>
+
+    <!-- CREATE TAB -->
+    <div id="tab-create" class="tab-pane flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+      <div class="rounded p-3" style="border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05);">
+        <p class="text-xs font-bold mb-2 uppercase" style="color: rgba(255,255,255,0.5);">Add Node</p>
+        <label class="text-xs" style="color: rgba(255,255,255,0.4);">Label</label>
+        <input id="n-label" placeholder="e.g. Albert Einstein" class="w-full rounded px-2 py-1 text-sm mt-1 mb-2 outline-none" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #e2e8f0;" onfocus="this.style.borderColor='#a78bfa'" onblur="this.style.borderColor='rgba(255,255,255,0.15)'"/>
+        <label class="text-xs" style="color: rgba(255,255,255,0.4);">Type</label>
+        <select id="n-type" class="w-full rounded px-2 py-1 text-sm mt-1 mb-2 outline-none" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #e2e8f0;">
+          <option>Person</option><option>Organization</option><option>Location</option>
+          <option>Concept</option><option>Event</option><option>Date</option>
+          <option>Product</option><option>Group</option><option>Node</option>
+        </select>
+        <label class="text-xs" style="color: rgba(255,255,255,0.4);">Properties (key: value, one per line)</label>
+        <textarea id="n-props" rows="3" placeholder="born: 1879&#10;field: Physics" class="w-full rounded px-2 py-1 text-sm mt-1 mb-2 outline-none resize-y" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #e2e8f0;" onfocus="this.style.borderColor='#a78bfa'" onblur="this.style.borderColor='rgba(255,255,255,0.15)'"></textarea>
+        <button onclick="addNode()" class="w-full text-white text-sm py-1.5 rounded font-medium" style="background: linear-gradient(90deg, #7c3aed, #4f46e5);" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">+ Create Node</button>
+      </div>
+
+      <div class="rounded p-3" style="border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05);">
+        <p class="text-xs font-bold mb-2 uppercase" style="color: rgba(255,255,255,0.5);">Add Relationship</p>
+        <label class="text-xs" style="color: rgba(255,255,255,0.4);">From Node</label>
+        <input id="e-from" placeholder="Node name..." list="node-datalist" class="w-full rounded px-2 py-1 text-sm mt-1 mb-2 outline-none" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #e2e8f0;" onfocus="this.style.borderColor='#a78bfa'" onblur="this.style.borderColor='rgba(255,255,255,0.15)'"/>
+        <label class="text-xs" style="color: rgba(255,255,255,0.4);">Relationship Type</label>
+        <input id="e-rel" placeholder="e.g. KNOWS, WORKS_AT" class="w-full rounded px-2 py-1 text-sm mt-1 mb-2 outline-none" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #e2e8f0;" onfocus="this.style.borderColor='#a78bfa'" onblur="this.style.borderColor='rgba(255,255,255,0.15)'"/>
+        <label class="text-xs" style="color: rgba(255,255,255,0.4);">To Node</label>
+        <input id="e-to" placeholder="Node name..." list="node-datalist" class="w-full rounded px-2 py-1 text-sm mt-1 mb-2 outline-none" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #e2e8f0;" onfocus="this.style.borderColor='#a78bfa'" onblur="this.style.borderColor='rgba(255,255,255,0.15)'"/>
+        <button onclick="addEdge()" class="w-full text-white text-sm py-1.5 rounded font-medium" style="background: linear-gradient(90deg, #059669, #0891b2);" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Create Relationship</button>
+        <datalist id="node-datalist"></datalist>
+      </div>
+    </div>
+
+    <!-- NODES TAB -->
+    <div id="tab-nodes" class="tab-pane hidden flex-1 overflow-y-auto p-3 flex flex-col gap-2">
+      <input id="node-search" placeholder="Search nodes..." oninput="filterNodes()" class="w-full rounded px-2 py-1 text-sm outline-none" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #e2e8f0;" onfocus="this.style.borderColor='#a78bfa'" onblur="this.style.borderColor='rgba(255,255,255,0.15)'"/>
+      <div id="node-list" class="flex flex-col gap-1"></div>
+    </div>
+
+    <!-- QUERY TAB -->
+    <div id="tab-query" class="tab-pane hidden flex-1 overflow-y-auto p-3 flex flex-col gap-2">
+      <p class="text-xs font-bold uppercase" style="color: rgba(255,255,255,0.5);">Query</p>
+      <textarea id="q-input" rows="5" placeholder="Type your query here..." class="w-full rounded px-2 py-1 text-sm font-mono outline-none resize-y" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #e2e8f0;" onfocus="this.style.borderColor='#a78bfa'" onblur="this.style.borderColor='rgba(255,255,255,0.15)'" onkeydown="if(event.ctrlKey&&event.key==='Enter')runQuery()"></textarea>
+      <button onclick="runQuery()" class="w-full text-white text-sm py-1.5 rounded font-medium" style="background: linear-gradient(90deg, #7c3aed, #4f46e5);" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Run Query (Ctrl+Enter)</button>
+      <div id="q-message" class="text-xs hidden" style="color: #6ee7b7;"></div>
+      <div id="q-error"   class="text-xs hidden" style="color: #fca5a5;"></div>
+      <div id="q-table-wrap" class="hidden overflow-x-auto">
+        <table id="q-table" class="w-full text-xs border-collapse"></table>
+      </div>
+    </div>
+
+    <!-- PDF TAB -->
+    <div id="tab-pdf" class="tab-pane hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+      <p class="text-xs font-bold uppercase" style="color: rgba(255,255,255,0.5);">Upload PDF</p>
+      <div id="upload-zone" onclick="document.getElementById('pdf-input').click()"
+           ondragover="onDragOver(event)" ondragleave="onDragLeave()" ondrop="onDrop(event)"
+           class="border-2 border-dashed rounded p-6 text-center cursor-pointer text-sm"
+           style="border-color: rgba(255,255,255,0.2); color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.04);"
+           onmouseover="this.style.borderColor='#a78bfa'; this.style.color='#a78bfa'" onmouseout="this.style.borderColor='rgba(255,255,255,0.2)'; this.style.color='rgba(255,255,255,0.4)'">
+        <div class="text-3xl mb-2">📄</div>
+        <div>Drop PDF here or click to browse</div>
+        <div id="uz-file" class="text-xs mt-1" style="color: #7dd3fc;"></div>
+        <input type="file" id="pdf-input" accept=".pdf" class="hidden" onchange="onFileSelect(event)"/>
+      </div>
+      <button id="pdf-btn" onclick="uploadPDF()" disabled class="w-full text-white text-sm py-1.5 rounded font-medium disabled:opacity-40 disabled:cursor-not-allowed" style="background: linear-gradient(90deg, #ea580c, #dc2626);">Extract Graph from PDF</button>
+      <div id="pdf-result" class="text-xs hidden" style="color: #6ee7b7;"></div>
+    </div>
+
+    <!-- OWL TAB -->
+    <div id="tab-owl" class="tab-pane hidden flex-1 overflow-y-auto p-3 flex flex-col gap-2">
+      <p class="text-xs font-bold uppercase" style="color: rgba(255,255,255,0.5);">OWL / RDF-XML Editor</p>
+      <textarea id="owl-editor" spellcheck="false" placeholder="Paste OWL/RDF-XML here..." oninput="owlLiveValidate()"
+        class="w-full rounded px-2 py-1 text-xs font-mono outline-none resize-y min-h-48" style="background: #0d1117; border: 1px solid rgba(255,255,255,0.15); color: #7ee787;"></textarea>
+      <div id="owl-err" class="text-xs hidden" style="color: #fca5a5;"></div>
+      <div id="owl-ok"  class="text-xs hidden" style="color: #6ee7b7;"></div>
+      <div class="flex gap-2">
+        <button onclick="owlVisualize()" class="flex-1 text-white text-xs py-1.5 rounded" style="background: linear-gradient(90deg, #7c3aed, #4f46e5);" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Preview</button>
+        <button onclick="owlImport()"    class="flex-1 text-white text-xs py-1.5 rounded" style="background: linear-gradient(90deg, #059669, #0891b2);" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Save to DB</button>
+        <button onclick="window.location='/owl/export'" class="flex-1 text-white text-xs py-1.5 rounded" style="background: rgba(255,255,255,0.15);" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">Export Graph</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- GRAPH CANVAS -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <div id="graph-wrap" class="flex-1 relative" style="background: radial-gradient(ellipse at center, #1a1040 0%, #0f0c29 100%);">
+      <div id="ph" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style="color: rgba(167,139,250,0.3);">
+        <div class="text-6xl mb-2">◎</div>
+        <p class="text-sm">Create nodes or upload a PDF to build your graph</p>
+      </div>
+      <div id="loading" class="hidden absolute inset-0 z-10 flex flex-col items-center justify-center gap-3" style="background: rgba(15,12,41,0.85);">
+        <div class="w-8 h-8 border-4 rounded-full animate-spin" style="border-color: rgba(255,255,255,0.1); border-top-color: #a78bfa;"></div>
+        <p id="load-msg" class="text-sm" style="color: #a78bfa;">Processing...</p>
+      </div>
+      <div id="network" class="absolute inset-0"></div>
+    </div>
+    <div class="px-3 py-1.5 flex-shrink-0" style="background: rgba(255,255,255,0.05); border-top: 1px solid rgba(255,255,255,0.08);"></div>
+  </div>
+
+  <!-- DETAIL PANEL -->
+  <div id="detail" class="hidden w-60 flex flex-col flex-shrink-0" style="background: rgba(255,255,255,0.06); backdrop-filter: blur(10px); border-left: 1px solid rgba(255,255,255,0.1);">
+    <div class="px-3 py-2 flex justify-between items-center" style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+      <span id="d-title" class="text-sm font-semibold" style="color: #e2e8f0;"></span>
+      <button onclick="closeDetail()" class="text-base" style="color: rgba(255,255,255,0.4);" onmouseover="this.style.color='#e2e8f0'" onmouseout="this.style.color='rgba(255,255,255,0.4)'">✕</button>
+    </div>
+    <div id="d-body" class="flex-1 overflow-y-auto p-3 text-xs" style="color: rgba(255,255,255,0.65);"></div>
+  </div>
+
+</div>
+
+<!-- CONTEXT MENU -->
+<div id="ctx-menu" class="hidden fixed rounded shadow-lg z-50 min-w-36 py-1" style="background: rgba(30,20,60,0.95); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.15);">
+  <div onclick="ctxEdit()"    class="px-4 py-2 text-sm cursor-pointer" style="color: #e2e8f0;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background=''">Edit</div>
+  <div onclick="ctxConnect()" class="px-4 py-2 text-sm cursor-pointer" style="color: #e2e8f0;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background=''">Connect to...</div>
+  <div style="border-top: 1px solid rgba(255,255,255,0.1); margin: 4px 0;"></div>
+  <div onclick="ctxDelete()"  class="px-4 py-2 text-sm cursor-pointer" style="color: #fca5a5;" onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background=''">Delete</div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="hidden fixed bottom-4 right-4 px-4 py-2 rounded text-white text-sm z-50"></div>
+
+<script>
+let network=null, nodesDS=null, edgesDS=null;
+let graphData={nodes:[],edges:[]};
+let ctxNodeId=null, connectMode=false, connectFrom=null;
+let selectedFile=null;
+
+const TYPE_COLOR={
+  Person:"#3b82f6",Organization:"#8b5cf6",Location:"#10b981",
+  Concept:"#f59e0b",Event:"#ef4444",Date:"#6b7280",
+  Product:"#06b6d4",Group:"#f97316",Node:"#374151"
+};
+const typeColor = t => TYPE_COLOR[t] || "#374151";
+
+window.addEventListener("load", ()=>{ loadGraph(); });
+
+async function loadGraph(){
+  const res = await fetch("/graph");
+  const data = await res.json();
+  renderGraph(data);
+}
+
+function switchTab(name){
+  const names=["create","nodes","query","pdf","owl"];
+  names.forEach(n=>{
+    const pane = document.getElementById("tab-"+n);
+    const btn  = document.getElementById("t-"+n);
+    if(n===name){
+      pane.classList.remove("hidden");
+      btn.style.color="#a78bfa";
+      btn.style.borderBottom="2px solid #a78bfa";
+    } else {
+      pane.classList.add("hidden");
+      btn.style.color="rgba(255,255,255,0.4)";
+      btn.style.borderBottom="";
+    }
+  });
+  if(name==="nodes") refreshNodeList();
+}
+
+function renderGraph(data){
+  graphData = data;
+  document.getElementById("ph").style.display = data.nodes.length ? "none" : "flex";
+  updateHeader();
+  refreshNodeList();
+  updateDatalist();
+
+  if(network){ network.destroy(); network=null; }
+  const container = document.getElementById("network");
+
+  nodesDS = new vis.DataSet(data.nodes.map(n=>({
+    id: n.id,
+    label: n.label,
+    color: {
+      background: typeColor(n.type||"Node"),
+      border: typeColor(n.type||"Node"),
+      highlight: {background: typeColor(n.type||"Node"), border: typeColor(n.type||"Node")},
+      hover: {background: typeColor(n.type||"Node"), border: typeColor(n.type||"Node")},
+    },
+    font: {color:"white", size:13, face:"Arial"},
+    shape: "ellipse",
+    size: 20,
+  })));
+
+  edgesDS = new vis.DataSet(data.edges.map(e=>({
+    id:e.id, from:e.from, to:e.to, label:e.label||"",
+    arrows:{to:{enabled:true,scaleFactor:0.6}},
+    color:{color:"#9ca3af"},
+    font:{color:"#374151",size:14,align:"middle",background:"white",strokeWidth:0},
+  })));
+
+  network = new vis.Network(container,{nodes:nodesDS,edges:edgesDS},{
+    layout:{hierarchical:{enabled:true,direction:"LR",sortMethod:"directed",levelSeparation:200,nodeSpacing:100}},
+    physics:{enabled:false},
+    interaction:{hover:false,zoomView:false,dragView:false,dragNodes:false},
+    background: "transparent",
+  });
+
+  network.on("stabilizationIterationsDone",()=>network.fit());
+
+  network.on("click", p=>{
+    hideCtx();
+    if(connectMode && p.nodes.length>0){ finishConnect(p.nodes[0]); return; }
+    if(p.nodes.length>0) showDetail(p.nodes[0]);
+    else closeDetail();
+  });
+
+  network.on("oncontext", p=>{
+    p.event.preventDefault();
+    if(p.nodes.length>0){ ctxNodeId=p.nodes[0]; showCtx(p.event.clientX,p.event.clientY); }
+  });
+
+  network.on("doubleClick", p=>{
+    if(p.nodes.length>0) openEditPanel(p.nodes[0]);
+  });
+}
+
+function updateHeader(){
+  document.getElementById("h-nodes").textContent = graphData.nodes.length;
+  document.getElementById("h-edges").textContent = graphData.edges.length;
+}
+
+function refreshNodeList(){
+  const q = (document.getElementById("node-search")?.value||"").toLowerCase();
+  const list = document.getElementById("node-list");
+  if(!list) return;
+  const nodes = graphData.nodes.filter(n=>!q||n.label.toLowerCase().includes(q)||(n.type||"").toLowerCase().includes(q));
+  list.innerHTML = nodes.map(n=>`
+    <div onclick="focusNode('${esc(n.id)}')" class="flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer text-sm" style="border: 1px solid rgba(255,255,255,0.1); color: #e2e8f0;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background=''">
+      <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${typeColor(n.type||'Node')}"></div>
+      <span class="flex-1 truncate">${esc(n.label)}</span>
+      <span class="text-xs px-1 rounded" style="color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.07);">${n.type||"Node"}</span>
+    </div>`).join("");
+}
+function filterNodes(){ refreshNodeList(); }
+
+function updateDatalist(){
+  document.getElementById("node-datalist").innerHTML =
+    graphData.nodes.map(n=>`<option value="${esc(n.label)}">`).join("");
+}
+
+async function addNode(){
+  const label = document.getElementById("n-label").value.trim();
+  const type  = document.getElementById("n-type").value;
+  const raw   = document.getElementById("n-props").value.trim();
+  if(!label){ toast("Enter a label","err"); return; }
+  const res  = await fetch("/node",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({label,type,properties:parseProps(raw)})});
+  const data = await res.json();
+  if(data.error){ toast(data.error,"err"); return; }
+  document.getElementById("n-label").value="";
+  document.getElementById("n-props").value="";
+  renderGraph(data.graph);
+  toast(`Node "${label}" created`,"ok");
+}
+
+async function addEdge(){
+  const fromLabel = document.getElementById("e-from").value.trim();
+  const rel       = document.getElementById("e-rel").value.trim() || "RELATED_TO";
+  const toLabel   = document.getElementById("e-to").value.trim();
+  if(!fromLabel||!toLabel){ toast("Fill From and To","err"); return; }
+  const fromNode = graphData.nodes.find(n=>n.label.toLowerCase()===fromLabel.toLowerCase());
+  const toNode   = graphData.nodes.find(n=>n.label.toLowerCase()===toLabel.toLowerCase());
+  if(!fromNode){ toast(`"${fromLabel}" not found`,"err"); return; }
+  if(!toNode)  { toast(`"${toLabel}" not found`,"err"); return; }
+  const res  = await fetch("/edge",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({from:fromNode.id,to:toNode.id,relation:rel})});
+  const data = await res.json();
+  if(data.error){ toast(data.error,"err"); return; }
+  document.getElementById("e-from").value="";
+  document.getElementById("e-rel").value="";
+  document.getElementById("e-to").value="";
+  renderGraph(data.graph);
+  toast(`Relationship "${rel}" created`,"ok");
+}
+
+function showDetail(nodeId){
+  const node = graphData.nodes.find(n=>n.id===nodeId); if(!node) return;
+  document.getElementById("d-title").textContent = node.label;
+  const out = graphData.edges.filter(e=>e.from===nodeId);
+  const inc = graphData.edges.filter(e=>e.to===nodeId);
+  const props = node.properties||{};
+  let html = `<div class="text-xs font-bold uppercase mb-1" style="color:rgba(255,255,255,0.4);">Type</div>
+    <div class="mb-2 font-medium" style="color:${typeColor(node.type||'Node')}">${node.type||"Node"}</div>`;
+  if(Object.keys(props).length){
+    html+=`<div class="text-xs font-bold uppercase mb-1" style="color:rgba(255,255,255,0.4);">Properties</div>`;
+    for(const [k,v] of Object.entries(props)) html+=`<div class="mb-1" style="color:rgba(255,255,255,0.7);"><b>${esc(k)}:</b> ${esc(String(v))}</div>`;
+  }
+  html+=`<div class="text-xs font-bold uppercase mt-2 mb-1" style="color:rgba(255,255,255,0.4);">Outgoing (${out.length})</div>`;
+  html+=out.slice(0,20).map(e=>{
+    const t=graphData.nodes.find(n=>n.id===e.to);
+    return `<div class="mb-1" style="color:rgba(255,255,255,0.6);">${esc(node.label)} <span style="color:#f97316;">[${esc(e.label)}]</span> ${esc(t?t.label:e.to)}</div>`;
+  }).join("")||`<div style="color:rgba(255,255,255,0.25);">None</div>`;
+  html+=`<div class="text-xs font-bold uppercase mt-2 mb-1" style="color:rgba(255,255,255,0.4);">Incoming (${inc.length})</div>`;
+  html+=inc.slice(0,20).map(e=>{
+    const s=graphData.nodes.find(n=>n.id===e.from);
+    return `<div class="mb-1" style="color:rgba(255,255,255,0.6);">${esc(s?s.label:e.from)} <span style="color:#f97316;">[${esc(e.label)}]</span> ${esc(node.label)}</div>`;
+  }).join("")||`<div style="color:rgba(255,255,255,0.25);">None</div>`;
+  html+=`<div class="flex gap-2 mt-3">
+    <button onclick="openEditPanel('${esc(nodeId)}')" class="flex-1 rounded py-1 text-xs" style="border:1px solid rgba(255,255,255,0.2);color:#e2e8f0;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background=''">Edit</button>
+    <button onclick="deleteNode('${esc(nodeId)}')" class="flex-1 rounded py-1 text-xs" style="border:1px solid rgba(239,68,68,0.4);color:#fca5a5;" onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background=''">Delete</button>
+  </div>`;
+  document.getElementById("d-body").innerHTML = html;
+  document.getElementById("detail").classList.remove("hidden");
+  document.getElementById("detail").classList.add("flex");
+}
+
+function closeDetail(){
+  document.getElementById("detail").classList.add("hidden");
+  document.getElementById("detail").classList.remove("flex");
+}
+
+function focusNode(id){
+  if(!network) return;
+  network.focus(id,{scale:1.3,animation:false});
+  showDetail(id);
+}
+
+function openEditPanel(nodeId){
+  const node = graphData.nodes.find(n=>n.id===nodeId); if(!node) return;
+  const props = node.properties||{};
+  const propsStr = Object.entries(props).map(([k,v])=>`${k}: ${v}`).join("\n");
+  document.getElementById("d-title").textContent = "Edit: "+node.label;
+  document.getElementById("d-body").innerHTML = `
+    <div class="text-xs mb-1" style="color:rgba(255,255,255,0.4);">Label</div>
+    <input id="edit-label" value="${esc(node.label)}" class="w-full rounded px-2 py-1 text-sm mb-2 outline-none" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#e2e8f0;"/>
+    <div class="text-xs mb-1" style="color:rgba(255,255,255,0.4);">Type</div>
+    <select id="edit-type" class="w-full rounded px-2 py-1 text-sm mb-2 outline-none" style="background:rgba(30,20,60,0.95);border:1px solid rgba(255,255,255,0.15);color:#e2e8f0;">
+      ${["Person","Organization","Location","Concept","Event","Date","Product","Group","Node"].map(t=>`<option${t===node.type?" selected":""}>${t}</option>`).join("")}
+    </select>
+    <div class="text-xs mb-1" style="color:rgba(255,255,255,0.4);">Properties</div>
+    <textarea id="edit-props" rows="4" class="w-full rounded px-2 py-1 text-sm mb-2 outline-none resize-y" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#e2e8f0;">${esc(propsStr)}</textarea>
+    <div class="flex gap-2">
+      <button onclick="saveEdit('${esc(nodeId)}')" class="flex-1 text-white rounded py-1 text-xs" style="background:linear-gradient(90deg,#7c3aed,#4f46e5);">Save</button>
+      <button onclick="showDetail('${esc(nodeId)}')" class="flex-1 rounded py-1 text-xs" style="border:1px solid rgba(255,255,255,0.2);color:#e2e8f0;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background=''">Cancel</button>
+    </div>`;
+  document.getElementById("detail").classList.remove("hidden");
+  document.getElementById("detail").classList.add("flex");
+}
+
+async function saveEdit(nodeId){
+  const label = document.getElementById("edit-label").value.trim();
+  const type  = document.getElementById("edit-type").value;
+  const raw   = document.getElementById("edit-props").value.trim();
+  const res   = await fetch(`/node/${nodeId}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({label,type,properties:parseProps(raw)})});
+  const data  = await res.json();
+  if(data.error){ toast(data.error,"err"); return; }
+  renderGraph(data.graph);
+  showDetail(nodeId);
+  toast("Node updated","ok");
+}
+
+async function deleteNode(nodeId){
+  if(!confirm("Delete this node and all its connections?")) return;
+  const res  = await fetch(`/node/${nodeId}`,{method:"DELETE"});
+  const data = await res.json();
+  closeDetail();
+  renderGraph(data.graph);
+  toast("Node deleted","ok");
+}
+
+function showCtx(x,y){
+  const m=document.getElementById("ctx-menu");
+  m.style.left=x+"px"; m.style.top=y+"px";
+  m.classList.remove("hidden");
+}
+function hideCtx(){ document.getElementById("ctx-menu").classList.add("hidden"); }
+document.addEventListener("click", hideCtx);
+function ctxEdit(){ if(ctxNodeId) openEditPanel(ctxNodeId); }
+function ctxDelete(){ if(ctxNodeId) deleteNode(ctxNodeId); }
+function ctxConnect(){
+  if(!ctxNodeId) return;
+  connectMode=true; connectFrom=ctxNodeId;
+  const node=graphData.nodes.find(n=>n.id===ctxNodeId);
+  toast(`Click the target node to connect from "${node?.label}"...`,"ok");
+}
+async function finishConnect(toId){
+  connectMode=false;
+  if(toId===connectFrom){ toast("Cannot connect to itself","err"); return; }
+  const rel = prompt("Relationship type:","RELATED_TO");
+  if(!rel) return;
+  const res  = await fetch("/edge",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({from:connectFrom,to:toId,relation:rel})});
+  const data = await res.json();
+  if(data.error){ toast(data.error,"err"); return; }
+  renderGraph(data.graph);
+  toast(`"${rel}" created`,"ok");
+}
+
+async function runQuery(){
+  const q = document.getElementById("q-input").value.trim();
+  if(!q) return;
+  const res  = await fetch("/query",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({q})});
+  const data = await res.json();
+  const msgEl=document.getElementById("q-message");
+  const errEl=document.getElementById("q-error");
+  const tblWrap=document.getElementById("q-table-wrap");
+  if(data.error){
+    errEl.textContent="⚠ "+data.error; errEl.classList.remove("hidden");
+    msgEl.classList.add("hidden"); tblWrap.classList.add("hidden"); return;
+  }
+  errEl.classList.add("hidden");
+  msgEl.textContent="✓ "+data.message; msgEl.classList.remove("hidden");
+  if(data.rows&&data.rows.length>0){
+    tblWrap.classList.remove("hidden");
+    const tbl=document.getElementById("q-table");
+    const hdr=`<tr class="bg-gray-50">${data.columns.map(c=>`<th class="px-2 py-1 text-left border-b border-gray-200 text-gray-500 uppercase">${esc(String(c))}</th>`).join("")}</tr>`;
+    const bdy=data.rows.map(row=>`<tr class="border-b border-gray-100">${row.map(cell=>`<td class="px-2 py-1 font-mono">${esc(typeof cell==="object"?JSON.stringify(cell):String(cell))}</td>`).join("")}</tr>`).join("");
+    tbl.innerHTML=`<thead>${hdr}</thead><tbody>${bdy}</tbody>`;
+  } else { tblWrap.classList.add("hidden"); }
+  if(data.graph&&(data.graph.nodes.length>0||data.graph.edges.length>0)) renderGraph(data.graph);
+}
+
+function onFileSelect(e){ setFile(e.target.files[0]); }
+function onDragOver(e){ e.preventDefault(); document.getElementById("upload-zone").classList.add("border-blue-400"); }
+function onDragLeave(){ document.getElementById("upload-zone").classList.remove("border-blue-400"); }
+function onDrop(e){
+  e.preventDefault(); document.getElementById("upload-zone").classList.remove("border-blue-400");
+  const f=e.dataTransfer.files[0];
+  if(f&&f.name.toLowerCase().endsWith(".pdf")) setFile(f);
+}
+function setFile(f){
+  selectedFile=f;
+  document.getElementById("uz-file").textContent=f.name;
+  document.getElementById("pdf-btn").disabled=false;
+}
+async function uploadPDF(){
+  if(!selectedFile) return;
+  setLoading(true,"Reading PDF...");
+  document.getElementById("pdf-btn").disabled=true;
+  const form=new FormData(); form.append("pdf",selectedFile);
+  try{
+    const res=await fetch("/upload",{method:"POST",body:form});
+    const data=await res.json();
+    if(data.error){ toast(data.error,"err"); return; }
+    renderGraph(data.graph);
+    const r=document.getElementById("pdf-result");
+    r.classList.remove("hidden");
+    r.textContent=`Imported ${data.stats.nodes} nodes and ${data.stats.edges} edges`;
+    toast("PDF imported","ok");
+  }catch(e){ toast("Failed: "+e.message,"err"); }
+  finally{ setLoading(false); document.getElementById("pdf-btn").disabled=false; }
+}
+
+function changeLayout(){
+  if(!network) return;
+  const v=document.getElementById("layout-sel").value;
+  if(v==="hierarchical"||v==="hierarchical-lr"){
+    network.setOptions({layout:{hierarchical:{enabled:true,direction:v==="hierarchical"?"UD":"LR",sortMethod:"directed",levelSeparation:120}},physics:{enabled:false}});
+  } else if(v==="circular"){
+    network.setOptions({layout:{hierarchical:{enabled:false}},physics:{enabled:false}});
+    const ids=nodesDS.getIds(), r=Math.max(240,ids.length*18);
+    ids.forEach((id,i)=>{ const a=(2*Math.PI*i)/ids.length; network.moveNode(id,r*Math.cos(a),r*Math.sin(a)); });
+    network.fit();
+  } else {
+    network.setOptions({layout:{hierarchical:{enabled:false}},physics:{enabled:true}});
+  }
+}
+function setEdgeFont(v){
+  if(!edgesDS) return;
+  edgesDS.update(edgesDS.getIds().map(id=>({id,font:{size:+v,color:"#6b7280",align:"middle"}})));
+}
+function fitGraph(){ if(network) network.fit(); }
+
+async function clearAll(){
+  if(!confirm("Delete ALL nodes and relationships?")) return;
+  const res=await fetch("/clear",{method:"POST"});
+  const data=await res.json();
+  renderGraph(data.graph);
+  closeDetail();
+  toast("Graph cleared","ok");
+}
+function exportJSON(){
+  const blob=new Blob([JSON.stringify(graphData,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="graph.json"; a.click();
+}
+function setLoading(on,msg="Processing..."){
+  document.getElementById("load-msg").textContent=msg;
+  document.getElementById("loading").classList.toggle("hidden",!on);
+}
+function parseProps(raw){
+  const props={};
+  raw.split("\n").forEach(line=>{
+    const idx=line.indexOf(":");
+    if(idx>0){ const k=line.slice(0,idx).trim(),v=line.slice(idx+1).trim(); if(k) props[k]=v; }
+  });
+  return props;
+}
+let toastT=null;
+function toast(msg,type="ok"){
+  const el=document.getElementById("toast");
+  el.textContent=msg;
+  el.className="fixed bottom-4 right-4 px-4 py-2 rounded text-white text-sm z-50 "+(type==="err"?"bg-red-500":"bg-green-500");
+  if(toastT) clearTimeout(toastT);
+  toastT=setTimeout(()=>el.className="hidden",3000);
+}
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+function owlLiveValidate(){
+  const text=document.getElementById("owl-editor").value.trim();
+  const errEl=document.getElementById("owl-err");
+  const okEl=document.getElementById("owl-ok");
+  if(!text){ errEl.classList.add("hidden"); okEl.classList.add("hidden"); return; }
+  try{
+    const doc=new DOMParser().parseFromString(text,"application/xml");
+    const err=doc.querySelector("parsererror");
+    if(err){ errEl.textContent="⚠ "+err.textContent.split("\n")[0].slice(0,80); errEl.classList.remove("hidden"); okEl.classList.add("hidden"); }
+    else { okEl.textContent="✓ Valid XML"; okEl.classList.remove("hidden"); errEl.classList.add("hidden"); }
+  }catch(e){ errEl.textContent="⚠ "+e.message; errEl.classList.remove("hidden"); okEl.classList.add("hidden"); }
+}
+async function owlVisualize(){
+  const text=document.getElementById("owl-editor").value.trim();
+  if(!text){ toast("Editor is empty","err"); return; }
+  setLoading(true,"Parsing OWL...");
+  try{
+    const res=await fetch("/owl/parse",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({owl:text})});
+    const data=await res.json();
+    if(data.error){ toast(data.error,"err"); return; }
+    renderGraph(data.graph);
+    toast(`${data.graph.nodes.length} nodes, ${data.graph.edges.length} edges`,"ok");
+  }catch(e){ toast(e.message,"err"); }
+  finally{ setLoading(false); }
+}
+async function owlImport(){
+  const text=document.getElementById("owl-editor").value.trim();
+  if(!text){ toast("Editor is empty","err"); return; }
+  setLoading(true,"Saving to DB...");
+  try{
+    const res=await fetch("/owl/import",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({owl:text})});
+    const data=await res.json();
+    if(data.error){ toast(data.error,"err"); return; }
+    // parse the OWL again to get only the new nodes/edges for display
+    const parseRes=await fetch("/owl/parse",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({owl:text})});
+    const parseData=await parseRes.json();
+    renderGraph(parseData.graph);
+    toast(`${data.added_nodes} nodes, ${data.added_edges} edges added`,"ok");
+  }catch(e){ toast(e.message,"err"); }
+  finally{ setLoading(false); }
+}
+</script>
+</body>
+</html>

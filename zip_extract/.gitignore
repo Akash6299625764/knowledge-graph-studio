@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+uploads/
+*.owl
+graph_db.json
+graph.db
+.env
+test_query.py
+make_paper.py
+sample_research_paper.pdf
+manual_ontology.owl
+research_ontology.owl

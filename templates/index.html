@@ -48,10 +48,16 @@
         <label class="text-xs" style="color: rgba(255,255,255,0.4);">Label</label>
         <input id="n-label" placeholder="e.g. Albert Einstein" class="w-full rounded px-2 py-1 text-sm mt-1 mb-2 outline-none" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #e2e8f0;" onfocus="this.style.borderColor='#a78bfa'" onblur="this.style.borderColor='rgba(255,255,255,0.15)'"/>
         <label class="text-xs" style="color: rgba(255,255,255,0.4);">Type</label>
-        <select id="n-type" class="w-full rounded px-2 py-1 text-sm mt-1 mb-2 outline-none" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #e2e8f0;">
-          <option>Person</option><option>Organization</option><option>Location</option>
-          <option>Concept</option><option>Event</option><option>Date</option>
-          <option>Product</option><option>Group</option><option>Node</option>
+        <select id="n-type" class="w-full rounded px-2 py-1 text-sm mt-1 mb-2 outline-none" style="background: rgba(30,20,60,0.95); border: 1px solid rgba(255,255,255,0.15); color: #e2e8f0;">
+          <option style="background: #1e1b4b; color: #e2e8f0;">Person</option>
+          <option style="background: #1e1b4b; color: #e2e8f0;">Organization</option>
+          <option style="background: #1e1b4b; color: #e2e8f0;">Location</option>
+          <option style="background: #1e1b4b; color: #e2e8f0;">Concept</option>
+          <option style="background: #1e1b4b; color: #e2e8f0;">Event</option>
+          <option style="background: #1e1b4b; color: #e2e8f0;">Date</option>
+          <option style="background: #1e1b4b; color: #e2e8f0;">Product</option>
+          <option style="background: #1e1b4b; color: #e2e8f0;">Group</option>
+          <option style="background: #1e1b4b; color: #e2e8f0;">Node</option>
         </select>
         <label class="text-xs" style="color: rgba(255,255,255,0.4);">Properties (key: value, one per line)</label>
         <textarea id="n-props" rows="3" placeholder="born: 1879&#10;field: Physics" class="w-full rounded px-2 py-1 text-sm mt-1 mb-2 outline-none resize-y" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #e2e8f0;" onfocus="this.style.borderColor='#a78bfa'" onblur="this.style.borderColor='rgba(255,255,255,0.15)'"></textarea>
@@ -209,31 +215,40 @@ function renderGraph(data){
   if(network){ network.destroy(); network=null; }
   const container = document.getElementById("network");
 
-  nodesDS = new vis.DataSet(data.nodes.map(n=>({
-    id: n.id,
-    label: n.label,
-    color: {
-      background: typeColor(n.type||"Node"),
-      border: typeColor(n.type||"Node"),
-      highlight: {background: typeColor(n.type||"Node"), border: typeColor(n.type||"Node")},
-      hover: {background: typeColor(n.type||"Node"), border: typeColor(n.type||"Node")},
+  nodesDS = new vis.DataSet(data.nodes.map(n => {
+    const deg = data.edges.filter(e => e.from === n.id || e.to === n.id).length;
+    const baseSize = 18 + Math.min(deg * 4, 30);
+    return {
+      id: n.id,
+      label: n.label,
+      color: {
+        background: typeColor(n.type||"Node"),
+        border: typeColor(n.type||"Node"),
+        highlight: {background: typeColor(n.type||"Node"), border: "#ffffff"},
+        hover: {background: typeColor(n.type||"Node"), border: "#ffffff"},
+      },
+      font: {color: "white", size: 13, face: "Arial", strokeWidth: 2, strokeColor: "#0f0c29"},
+      shape: "ellipse",
+      size: baseSize,
+    };
+  }));
+
+  edgesDS = new vis.DataSet(data.edges.map(e => ({
+    id: e.id, from: e.from, to: e.to, label: e.label || "",
+    arrows: {to: {enabled: true, scaleFactor: 0.7}},
+    color: {color: "#9ca3af", highlight: "#f97316", hover: "#f97316"},
+    font: {color: "#e2e8f0", size: 12, align: "middle", background: "rgba(15, 12, 41, 0.85)", strokeWidth: 2, strokeColor: "#0f0c29"},
+  })));
+
+  network = new vis.Network(container, {nodes: nodesDS, edges: edgesDS}, {
+    layout: { hierarchical: { enabled: false } },
+    physics: {
+      enabled: true,
+      solver: "forceAtlas2Based",
+      forceAtlas2Based: { gravitationalConstant: -60, centralGravity: 0.01, springLength: 120, springConstant: 0.08, damping: 0.4 },
+      stabilization: { iterations: 150 }
     },
-    font: {color:"white", size:13, face:"Arial"},
-    shape: "ellipse",
-    size: 20,
-  })));
-
-  edgesDS = new vis.DataSet(data.edges.map(e=>({
-    id:e.id, from:e.from, to:e.to, label:e.label||"",
-    arrows:{to:{enabled:true,scaleFactor:0.6}},
-    color:{color:"#9ca3af"},
-    font:{color:"#374151",size:14,align:"middle",background:"white",strokeWidth:0},
-  })));
-
-  network = new vis.Network(container,{nodes:nodesDS,edges:edgesDS},{
-    layout:{hierarchical:{enabled:true,direction:"LR",sortMethod:"directed",levelSeparation:200,nodeSpacing:100}},
-    physics:{enabled:false},
-    interaction:{hover:false,zoomView:false,dragView:false,dragNodes:false},
+    interaction: { hover: true, zoomView: true, dragView: true, dragNodes: true },
     background: "transparent",
   });
 
@@ -365,7 +380,7 @@ function openEditPanel(nodeId){
     <input id="edit-label" value="${esc(node.label)}" class="w-full rounded px-2 py-1 text-sm mb-2 outline-none" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#e2e8f0;"/>
     <div class="text-xs mb-1" style="color:rgba(255,255,255,0.4);">Type</div>
     <select id="edit-type" class="w-full rounded px-2 py-1 text-sm mb-2 outline-none" style="background:rgba(30,20,60,0.95);border:1px solid rgba(255,255,255,0.15);color:#e2e8f0;">
-      ${["Person","Organization","Location","Concept","Event","Date","Product","Group","Node"].map(t=>`<option${t===node.type?" selected":""}>${t}</option>`).join("")}
+      ${["Person","Organization","Location","Concept","Event","Date","Product","Group","Node"].map(t=>`<option style="background:#1e1b4b;color:#e2e8f0;"${t===node.type?" selected":""}>${t}</option>`).join("")}
     </select>
     <div class="text-xs mb-1" style="color:rgba(255,255,255,0.4);">Properties</div>
     <textarea id="edit-props" rows="4" class="w-full rounded px-2 py-1 text-sm mb-2 outline-none resize-y" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#e2e8f0;">${esc(propsStr)}</textarea>
